@@ -51,4 +51,4 @@ jobs:
       - name: Run hello_kube
         env:
           NAMESPACE: demo
-        run: python3 hello_kube.py 'echo hiii && sleep 1'
+        run: python3 hello_kube.py
