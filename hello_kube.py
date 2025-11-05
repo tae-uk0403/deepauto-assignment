@@ -1,9 +1,10 @@
-import time
+import time, os
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
 
 NAME = "hello"  # 생성할 Pod의 이름
-NS = "default"  # 사용할 namespace
+NS = "demo"  # 사용할 namespace
+
 
 
 def create_pod(core_api, name, namespace):

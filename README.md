@@ -112,7 +112,6 @@ subjects:
 ```bash
 # API 서버 주소
 kubectl cluster-info
-# 출력 예: https://192.168.49.2:8443
 
 # CA 인증서 데이터 (base64 인코딩)
 kubectl config view --raw -o jsonpath='{.clusters[0].cluster.certificate-authority-data}'
@@ -123,38 +122,37 @@ kubectl config view --raw -o jsonpath='{.clusters[0].cluster.certificate-authori
 `.github/actions/k8s-set-context-with-id-token/action.yaml` 파일 생성:
 
 ```yaml
-# composite action 내부의 핵심 스텝(신입 스타일)
-- name: Mask token
-  shell: bash
-  run: |
-    echo "::add-mask::${{ inputs.token }}"
+name: setup-kubeconfig
+on: workflow_dispatch
+jobs:
+  setup:
+    runs-on: self-hosted
+    env:
+      KCFG: ${{ github.workspace }}/kubernetes-kubeconfig
+    steps:
+      - uses: actions/checkout@v4
 
-- name: Write kubeconfig
-  shell: bash
-  env:
-    KCFG: ${{ github.workspace }}/kubernetes-kubeconfig
-  run: |
-    # kubeconfig 파일이 있으면 삭제함 (명시적으로 확인)
-    if [ -f "$KCFG" ]; then
-      rm "$KCFG"
-    fi
+      - name: Mask token
+        run: echo "::add-mask::${{ secrets.KUBE_TOKEN }}"
 
-    # cluster 정보 설정
-    kubectl config --kubeconfig="$KCFG" set-cluster kubernetes \
-      --server="${{ inputs.server }}" \
-      --certificate-authority-data="${{ inputs.certificate-authority-data }}"
+      - name: Write kubeconfig
+        shell: bash
+        run: |
+          [ -f "$KCFG" ] && rm "$KCFG"
 
-    # 사용자(토큰) 설정
-    kubectl config --kubeconfig="$KCFG" set-credentials github-actions \
-      --token="${{ inputs.token }}"
+          kubectl config --kubeconfig="$KCFG" set-cluster kubernetes \
+            --server="${{ secrets.KUBE_APISERVER }}" \
+            --certificate-authority-data="${{ secrets.KUBE_CA }}"
 
-    # 컨텍스트와 기본 네임스페이스 설정
-    kubectl config --kubeconfig="$KCFG" set-context github-actions \
-      --cluster=kubernetes --user=github-actions --namespace="${{ inputs.namespace }}"
+          kubectl config --kubeconfig="$KCFG" set-credentials github-actions \
+            --token="${{ secrets.KUBE_TOKEN }}"
 
-    # 컨텍스트 활성화 및 KUBECONFIG export
-    kubectl config --kubeconfig="$KCFG" use-context github-actions
-    echo "KUBECONFIG=$KCFG" >> "$GITHUB_ENV"
+          kubectl config --kubeconfig="$KCFG" set-context github-actions \
+            --cluster=kubernetes --user=github-actions --namespace=demo
+
+          kubectl config --kubeconfig="$KCFG" use-context github-actions
+          echo "KUBECONFIG=$KCFG" >> "$GITHUB_ENV"
+
 ```
 
 #### 3-3. 워크플로우 파일 생성
@@ -214,5 +212,5 @@ jobs:
       - name: Run hello_kube
         env:
           NAMESPACE: demo
-        run: python3 hello_kube.py 'echo hiii && sleep 1'
+        run: python3 hello_kube.py
 ```
