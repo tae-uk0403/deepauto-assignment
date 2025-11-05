@@ -1,0 +1,54 @@
+name: deploy-kubernetes
+permissions:
+  id-token: write
+  contents: read
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  oidc-demo:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create OIDC token
+        id: create-oidc-token
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const t = await core.getIDToken('kubernetes')   // 반드시 kube-apiserver의 --oidc-client-id 와 동일해야 함
+            core.setOutput('id_token', t)
+
+      - name: Create kubeconfig (use token)
+        env:
+          KCFG: ${{ github.workspace }}/kubeconfig
+        run: |
+          cat > "$KCFG" <<'EOF'
+          apiVersion: v1
+          kind: Config
+          clusters:
+          - name: kubernetes
+            cluster:
+              server: ${{ secrets.K8S_SERVER }}
+              certificate-authority-data: ${{ secrets.K8S_CA_DATA }}
+          users:
+          - name: github-actions
+            user:
+              token: ${{ steps.create-oidc-token.outputs.id_token }}
+          contexts:
+          - name: github-actions
+            context:
+              cluster: kubernetes
+              user: github-actions
+              namespace: demo
+          current-context: github-actions
+          EOF
+          echo "KUBECONFIG=$KCFG" >> $GITHUB_ENV
+
+      - name: Run hello_kube
+        env:
+          NAMESPACE: demo
+        run: python3 hello_kube.py 'echo hiii && sleep 1'

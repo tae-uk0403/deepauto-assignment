@@ -1,0 +1,32 @@
+# composite action 내부의 핵심 스텝(신입 스타일)
+- name: Mask token
+  shell: bash
+  run: |
+    echo "::add-mask::${{ inputs.token }}"
+
+- name: Write kubeconfig
+  shell: bash
+  env:
+    KCFG: ${{ github.workspace }}/kubernetes-kubeconfig
+  run: |
+    # kubeconfig 파일이 있으면 삭제함 (명시적으로 확인)
+    if [ -f "$KCFG" ]; then
+      rm "$KCFG"
+    fi
+
+    # cluster 정보 설정
+    kubectl config --kubeconfig="$KCFG" set-cluster kubernetes \
+      --server="${{ inputs.server }}" \
+      --certificate-authority-data="${{ inputs.certificate-authority-data }}"
+
+    # 사용자(토큰) 설정
+    kubectl config --kubeconfig="$KCFG" set-credentials github-actions \
+      --token="${{ inputs.token }}"
+
+    # 컨텍스트와 기본 네임스페이스 설정
+    kubectl config --kubeconfig="$KCFG" set-context github-actions \
+      --cluster=kubernetes --user=github-actions --namespace="${{ inputs.namespace }}"
+
+    # 컨텍스트 활성화 및 KUBECONFIG export
+    kubectl config --kubeconfig="$KCFG" use-context github-actions
+    echo "KUBECONFIG=$KCFG" >> "$GITHUB_ENV"
