@@ -22,3 +22,6 @@ Python library:
 
 1. **`create_pod(core_api, name, namespace)`**: hello라는 이름의 Pod 생성
 2. **`check_pod_completion(core_api, name, namespace)`**: Pod가 완료 상태가 되면, Pod의 로그를 출력한 후 Pod를 삭제합니다.
+
+## Task 2
+Kubernetes 클러스터에 GitHub Actions Runner Controller (ARC)를 배포합니다.
