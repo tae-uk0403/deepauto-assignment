@@ -81,8 +81,8 @@ metadata:
   name: actions-oidc-role
 rules:
 - apiGroups: [""]
-  resources: ["pods"]
-  verbs: ["get", "watch", "list", "create", "update", "delete"]
+  resources: ["pods", "pods/log"]
+  verbs: ["get", "watch", "list", "create", "update", "delete"]                
 - apiGroups: ["apps"]
   resources: ["deployments"]
   verbs: ["get", "watch", "list", "create", "update", "delete"]
@@ -102,7 +102,7 @@ roleRef:
   name: actions-oidc-role
 subjects:
 - kind: User
-  name: github-actions:repo:ntw0403/deepauto_assignment
+  name: github-actions:repo:tae-uk0403/deepauto_assignment:ref:refs/heads/main
 ```
 
 ### 단계 3: GitHub Actions 워크플로우 설정
