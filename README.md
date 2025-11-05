@@ -1,18 +1,13 @@
 # Deepauto-Assignment
 
-## Getting Started
+## Description
 
 ### Dependencies
 
 - **OS**: macOS
 - **Python**: Python 3.10
 - **Kubernetes cluster**: minikube
-
-Python library:
-- `kubernetes` - Kubernetes Python 클라이언트 라이브러리
-
-
-
+- **Python library**: Kubernetes
 
 
 ## Task 1
@@ -31,9 +26,12 @@ Kubernetes 클러스터에 GitHub Actions Runner Controller (ARC)를 배포
 
 ## Task 3
 
-GitHub Actions에서 OIDC 인증을 통해 Kubernetes API에 접근하는 기능을 구현했습니다.
+GitHub Actions에서 OIDC 인증을 통해 Kubernetes API에 접근하는 기능 구현
 
-GitHub Actions에서 발급받은 OIDC 토큰을 사용하여 Kubernetes API에서 pod 목록을 조회하고, 인증과 권한 부여가 정상적으로 작동하는지 확인했습니다.
+GitHub Actions에서 발급받은 OIDC 토큰을 사용하여 Kubernetes API에서 pod 목록을 조회하고, 인증과 권한 부여가 정상적으로 작동하는지 확인
+
+참조 post - https://community.sap.com/t5/open-source-blog-posts/using-github-actions-openid-connect-in-kubernetes/ba-p/13542513
+
 
 ### 전체 단계
 
@@ -51,19 +49,19 @@ minikube start \
   --extra-config=apiserver.oidc-client-id="kubernetes" \
   --extra-config=apiserver.oidc-username-claim="sub" \
   --extra-config=apiserver.oidc-username-prefix="github-actions:" \
-  --extra-config=apiserver.oidc-required-claim="repository=ntw0403/deepauto_assignment"
+  --extra-config=apiserver.oidc-required-claim="repository=ntw0403/deepauto-assignment"
 ```
 
 설정 옵션 설명:
 - `oidc-issuer-url`: GitHub Actions OIDC 발급자 URL (고정값)
-- `oidc-client-id`: 클러스터 식별자 (임의로 지정, 예: kubernetes)
+- `oidc-client-id`: 클러스터 식별자
 - `oidc-username-claim`: 토큰에서 사용자명 추출 필드 (sub 사용)
 - `oidc-username-prefix`: 사용자명 앞에 붙을 접두사 (github-actions:)
-- `oidc-required-claim`: 접근 허용할 리포지토리 제한 (보안 강화)
+- `oidc-required-claim`: 접근 허용할 리포지토리 제한
 
 ### 단계 2: Kubernetes RBAC 권한 설정
 
-OIDC 토큰으로 인증된 사용자에게 필요한 최소 권한 부여
+OIDC 토큰으로 인증된 사용자에게 필요한 권한 부여
 
 #### 2-1. Namespace 생성
 
@@ -102,12 +100,13 @@ roleRef:
   name: actions-oidc-role
 subjects:
 - kind: User
-  name: github-actions:repo:tae-uk0403/deepauto_assignment:ref:refs/heads/main
+  name: github-actions:repo:tae-uk0403/deepauto-assignment:ref:refs/heads/main
 ```
 
 ### 단계 3: GitHub Actions 워크플로우 설정
 
 #### 3-1. API 서버 정보 수집
+github secret 등록 (K8S_SERVER, K8S_CA_DATA)
 
 ```bash
 # API 서버 주소
@@ -131,9 +130,6 @@ jobs:
       KCFG: ${{ github.workspace }}/kubernetes-kubeconfig
     steps:
       - uses: actions/checkout@v4
-
-      - name: Mask token
-        run: echo "::add-mask::${{ secrets.KUBE_TOKEN }}"
 
       - name: Write kubeconfig
         shell: bash
@@ -213,4 +209,39 @@ jobs:
         env:
           NAMESPACE: demo
         run: python3 hello_kube.py
+```
+
+## Extra Credit 2
+
+Docker를 사용하여 `hello_kube.py`를 컨테이너 이미지로 빌드하고, GitHub Actions에서 Docker Hub로 자동 푸시
+
+- **준비 (Secrets)**:
+  - `DOCKERHUB_USERNAME`: Docker Hub 사용자명
+  - `DOCKERHUB_TOKEN`: Docker Hub 액세스 토큰
+
+- **관련 파일**:
+  - `Dockerfile`: 베이스 이미지와 의존성, 엔트리포인트 정의
+  - `.dockerignore`: 빌드 컨텍스트에서 제외 파일 설정
+  - `.github/workflows/deploy-kubernetes.yaml`: 로그인/빌드/푸시 단계 추가
+
+### GitHub Actions: Docker 로그인 및 빌드/푸시 단계
+
+`.github/workflows/deploy-kubernetes.yaml` Docker Hub에 로그인 후,`Dockerfile`로 이미지를 빌드하고 docker hub에 push
+
+```yaml
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build & Push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/hello-kube:latest
 ```
