@@ -35,6 +35,12 @@ def check_pod_completion(core_api, name, namespace):
 
 def main():
 
+    kcfg = os.environ.get("KUBECONFIG")
+    if not kcfg:
+        raise RuntimeError("KUBECONFIG not set")
+    config.load_kube_config(config_file=kcfg)
+    core = client.CoreV1Api()
+
     # Kubernetes API에 연결 설정
     config.load_kube_config()
     core = client.CoreV1Api()
