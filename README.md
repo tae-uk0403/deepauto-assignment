@@ -9,6 +9,21 @@
 - **Kubernetes cluster**: minikube
 - **Python library**: Kubernetes
 
+### Project Structure
+
+```
+deepauto-assignment/
+├── .dockerignore
+├── .github/
+│   ├── actions/
+│   │   └── k8s-set-context-with-id-token/
+│   │       └── action.yaml
+│   └── workflows/
+│       └── deploy-kubernetes.yaml
+├── Dockerfile
+├── hello_kube.py
+└── README.md
+```
 
 ## Task 1
 `hello_kube.py` 스크립트는 Kubernetes API를 사용하여 "hello"라는 이름의 Pod를 생성하고, 생성 완료 후 Pod의 로그를 출력하고, 자동으로 Pod를 삭제
